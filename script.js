@@ -61,16 +61,52 @@ function trackBlobs() {
     for (let i = 0; i < contours.size(); i++) {
       const contour = contours.get(i);
       const area = cv.contourArea(contour);
-      if (area < 10) continue;
+      if (area < 100) continue;
       const rect = cv.boundingRect(contour);
       const [x, y, w, h] = [rect.x, rect.y, rect.width, rect.height];
-      cv.rectangle(
-        frame,
-        new cv.Point(x, y),
-        new cv.Point(x + w, y + h),
-        new cv.Scalar(255, 0, 0),
-        2
-      );
+      const mask = new cv.Mat.zeros(frame.rows, frame.cols, cv.CV_8U);
+      cv.drawContours(mask, contours, i, new cv.Scalar(255), -1);
+      const meanColor = cv.mean(frame, mask);
+
+      //   cv.rectangle(
+      //     frame,
+      //     new cv.Point(x, y),
+      //     new cv.Point(x + w, y + h),
+      //     new cv.Scalar(255, 0, 0),
+      //     2
+      //   );
+      const meanRed = meanColor[0];
+      const meanGreen = meanColor[1];
+      const meanBlue = meanColor[2];
+
+      let blobType = "text";
+
+      if (meanRed > 150 && meanGreen > 150 && meanBlue < 150) {
+        // Yellow sticky note
+        cv.rectangle(
+          frame,
+          new cv.Point(x, y),
+          new cv.Point(x + w, y + h),
+          new cv.Scalar(0, 255, 0),
+          4
+        );
+        blobType = "header";
+        // Perform specific function for yellow sticky notes
+        // ...
+      } else {
+        // White square
+        cv.rectangle(
+          frame,
+          new cv.Point(x, y),
+          new cv.Point(x + w, y + h),
+          new cv.Scalar(255, 255, 255),
+          2
+        );
+        // Perform specific function for white squares
+        // ...
+      }
+
+      mask.delete();
 
       // Add a text element in SVG with random text
       const text = document.createElement("div");
@@ -81,7 +117,12 @@ function trackBlobs() {
       text.style.height = `${h}px`;
       text.style.overflow = "hidden";
       text.setAttribute("fill", "red");
-      text.innerHTML = loremIpsum;
+      if (blobType === "text") {
+        text.innerHTML = loremIpsum;
+      } else if (blobType === "header") {
+        text.innerHTML = "Header";
+        text.style.fontSize = "24px";
+      }
       poster.appendChild(text);
     }
 
